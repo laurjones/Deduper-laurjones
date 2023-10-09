@@ -1,0 +1,102 @@
+Deduper Assignment pseudocode
+LJ Jones 
+Fall 2023
+
+The Problem:
+The goal of sequencing library preparation is to obtain an accurate representation of sequences in a sample. At times, some sequences 
+can be overrepresented due to duplication during PCR. This can skew the analysis and lead us to believe that some sequences are expressed
+more heavily than they actually are in the RNA seq data. As such, it is imparative we remove these overrepresented sequences before our 
+final analysis to obtain accurate results. 
+
+Our goals:
+Our goal is to remove these duplicated sequence counts to obtain cleaner data for downstream analysis (note: I will be keeping the first
+sequence by default). I will check for duplicates by checking whether they have the same location/chromosome, same strandedness, and same 
+UMI (accounting for soft clipping). Then, I will write non-duplicated results to a clean output file, storing the duplicates in a 
+separate file. 
+
+Pseudocode:
+
+Implement Argparse
+
+Initialize umi_dict
+Intialize duplicate counter
+
+def pos_changer:
+'''
+This function calculates where the read should map to the reference and assigns this position to matched reads.
+
+Sample input: 1573, '15S75M', forward
+Sample output: 1558 (adjusted starting position)
+'''
+parse cigar string
+calculate how many I, S, H, or P there are at the start of the cigar string
+if I, S, H, or P present, calculate a new starting position (reference starting position - # of nonconsuming)
+return new starting position
+
+def dupdetection:
+'''
+This function extracts information to detect PCR duplication. 
+'''
+grab chromosome info from column 3 of read
+grab starting position from column 4 of read and cigar string from column 6 of read and
+grab bitwise flag to determine strandedness
+pass the starting position and cigar string into pos_changer
+    store output as the adjusted starting position
+    calculate the length of read
+check the stored read's umi against the umis in umi_dict:
+    if umi not in umi umi_dict store in umi_dict (key: umi... value: read length, mapping position, strandedness)
+    if umi in umi dict check if read length, mapping position, and strandedness are also the same
+        if they are the same, it's a PCR duplicate
+        if they are different, it's unique and can be added to umi_dict
+
+Open the input Sam file 
+while true:
+    read next line in input Sam file
+    if line doesn't start with @:
+        pass line into dupdetection function
+        write line to correct output file
+        break 
+    if line starts with @:
+        ????
+    if disecting function says it's a duplicate:
+        write the line to duplicate output file
+        increment duplicate counter
+    else if it's not a duplicate:
+        write the line to unique output file
+
+_______________
+Sample Input
+_______________
+-One PCR duplicate should be returned. 
+
+@SQ     SN:GL456359.1   LN:22974
+@SQ     SN:GL456396.1   LN:21240
+@SQ     SN:GL456368.1   LN:20208
+@SQ     SN:MU069434.1   LN:8412
+@SQ     SN:JH584295.1   LN:1976
+NS500451:154:HWKTMBGXX:1:11101:18318:1085:AGCTACCA:GGCGTATT     163     MT      6161    255     1S71M   =       6516    426     AGTCTATTGGCTTTCTAGGCTTTATTGTATGAGCCCACCACATATTCACAGTAGGATTAGATGTAGACACAC        /EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE<EEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEA      NH:i:1  HI:i:1  AS:i:140        nM:i:0
+NS500451:154:HWKTMBGXX:1:11101:24597:1098:TAGCTAGC:CCAAGGTT     83      18      5659630 255     71M1S   =       5659435 -266    ACTATGGTTCCAGATTTCTTTCCTAGGGTTTCTATTTCCAACGTTGCTTCACCTTCGGTTTTCTTTATTGTA        EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE/6/      NH:i:1  HI:i:1  AS:i:140        nM:i:0
+NS500451:154:HWKTMBGXX:1:11101:18318:1085:AGCTACCA:GGCGTATT     163     MT      6161    255     1S71M   =       6516    426     AGTCTATTGGCTTTCTAGGCTTTATTGTATGAGCCCACCACATATTCACAGTAGGATTAGATGTAGACACAC        /EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE<EEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEA      NH:i:1  HI:i:1  AS:i:140        nM:i:0
+NS500451:154:HWKTMBGXX:1:11101:13987:1100:TGAGTGAG:CGTTGGAT     147     7       126046387       255     40M128N31M1S    =       126045292       -1294   CCAGGGTGGCATCCGCAGTAGGGACTGGTTCTCAGACTGGCTGTTGAGAGCATTGCACATCTCGATGGTCAG      EEEEEEAEEEEEEEEEEEEEE<EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE/        NH:i:1  HI:i:1  AS:i:144        nM:i:1
+NS500451:154:HWKTMBGXX:1:11101:15723:1090:AGACACTC:TCGTAGGT     147     2       52060535        255     27M4529N44M1S   =       52059134        -6001   CTTGTCAAAATTTTCGCGGTATTTAACCTGGCTGCTCAGCTTGGCTGCCTTCTTGGCCATTTCAATGTCTGC      EEEEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE/EEEE        NH:i:1  HI:i:1  AS:i:143        nM:i:0
+_______________
+Sample Output
+_______________
+Cleaned output:
+@SQ     SN:GL456359.1   LN:22974
+@SQ     SN:GL456396.1   LN:21240
+@SQ     SN:GL456368.1   LN:20208
+@SQ     SN:MU069434.1   LN:8412
+@SQ     SN:JH584295.1   LN:1976
+NS500451:154:HWKTMBGXX:1:11101:18318:1085:AGCTACCA:GGCGTATT     163     MT      6161    255     1S71M   =       6516    426     AGTCTATTGGCTTTCTAGGCTTTATTGTATGAGCCCACCACATATTCACAGTAGGATTAGATGTAGACACAC        /EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE<EEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEA      NH:i:1  HI:i:1  AS:i:140        nM:i:0
+NS500451:154:HWKTMBGXX:1:11101:24597:1098:TAGCTAGC:CCAAGGTT     83      18      5659630 255     71M1S   =       5659435 -266    ACTATGGTTCCAGATTTCTTTCCTAGGGTTTCTATTTCCAACGTTGCTTCACCTTCGGTTTTCTTTATTGTA        EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE/6/      NH:i:1  HI:i:1  AS:i:140        nM:i:0
+NS500451:154:HWKTMBGXX:1:11101:13987:1100:TGAGTGAG:CGTTGGAT     147     7       126046387       255     40M128N31M1S    =       126045292       -1294   CCAGGGTGGCATCCGCAGTAGGGACTGGTTCTCAGACTGGCTGTTGAGAGCATTGCACATCTCGATGGTCAG      EEEEEEAEEEEEEEEEEEEEE<EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE/        NH:i:1  HI:i:1  AS:i:144        nM:i:1
+NS500451:154:HWKTMBGXX:1:11101:15723:1090:AGACACTC:TCGTAGGT     147     2       52060535        255     27M4529N44M1S   =       52059134        -6001   CTTGTCAAAATTTTCGCGGTATTTAACCTGGCTGCTCAGCTTGGCTGCCTTCTTGGCCATTTCAATGTCTGC      EEEEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEE/EEEE        NH:i:1  HI:i:1  AS:i:143        nM:i:0
+
+Duplicate output file:
+@SQ     SN:GL456359.1   LN:22974
+@SQ     SN:GL456396.1   LN:21240
+@SQ     SN:GL456368.1   LN:20208
+@SQ     SN:MU069434.1   LN:8412
+@SQ     SN:JH584295.1   LN:1976
+NS500451:154:HWKTMBGXX:1:11101:18318:1085:AGCTACCA:GGCGTATT     163     MT      6161    255     1S71M   =       6516    426     AGTCTATTGGCTTTCTAGGCTTTATTGTATGAGCCCACCACATATTCACAGTAGGATTAGATGTAGACACAC        /EEEEEEEEEEEEEEEEEEEEEEEEEEEEEE<EEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEA      NH:i:1  HI:i:1  AS:i:140        nM:i:0
