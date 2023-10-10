@@ -33,36 +33,27 @@ calculate how many I, S, H, or P there are at the start of the cigar string
 if I, S, H, or P present, calculate a new starting position (reference starting position - # of nonconsuming)
 return new starting position
 
-def dupdetection:
-'''
-This function extracts information to detect PCR duplication. 
-'''
-grab chromosome info from column 3 of read
-grab starting position from column 4 of read and cigar string from column 6 of read and
-grab bitwise flag to determine strandedness
-pass the starting position and cigar string into pos_changer
-    store output as the adjusted starting position
-    calculate the length of read
-check the stored read's umi against the umis in umi_dict:
-    if umi not in umi umi_dict store in umi_dict (key: umi... value: read length, mapping position, strandedness)
-    if umi in umi dict check if read length, mapping position, and strandedness are also the same
-        if they are the same, it's a PCR duplicate
-        if they are different, it's unique and can be added to umi_dict
-
 Open the input Sam file 
 while true:
     read next line in input Sam file
     if line doesn't start with @:
-        pass line into dupdetection function
+        grab chromosome info from column 3 of read
+        grab starting position from column 4 of read and cigar string from column 6 of read and
+        grab bitwise flag to determine strandedness
+        pass the starting position and cigar string into pos_changer
+            store output as the adjusted starting position
+            calculate the length of read
+        check the stored read's umi against the umis in umi_dict:
+            if umi not in umi umi_dict store in umi_dict (key: umi... value: read length, mapping position, strandedness)
+            if umi in umi dict check if read length, mapping position, and strandedness are also the same
+                if they are the same, it's a PCR duplicate
+                if they are different, it's unique and can be added to umi_dict
         write line to correct output file
+            if written to duplicate output file, increment duplicate counter
         break 
     if line starts with @:
-        ????
-    if disecting function says it's a duplicate:
-        write the line to duplicate output file
-        increment duplicate counter
-    else if it's not a duplicate:
-        write the line to unique output file
+        write the line to the duplicate output file
+
 
 _______________
 Sample Input
