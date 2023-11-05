@@ -1,11 +1,13 @@
+#!/usr/bin/env python
+
 import argparse
 import re 
 
 def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--filename", help="Input filename", required=True)
+    parser = argparse.ArgumentParser(description="A program to hold input+output filename and umi list")
+    parser.add_argument("-f", "--filename", help="This is my sorte sam file.", required=True)
     parser.add_argument("-o", "--outfile", help="output file name", type=str)
-    parser.add_argument("-u", "--umilist", help="output file name", required=False)
+    parser.add_argument("-u", "--umilist", help="umilist", required=False)
     return parser.parse_args()
 
 args=get_args()
@@ -13,13 +15,25 @@ f=args.filename
 o=args.outfile
 u=args.umilist
 
-def position_changer(bitflag, cigar, position):
+def umi_list_builder(umi_filename: str) -> list[str]:
+    '''Function to build umilist from STL96.txt'''
+    umilist = []
+    with open (umi_filename, "r") as f:
+        for line in f: 
+            # e.g., line = AACGCCAT\n
+            line = line.strip()
+            umilist.append(line)
+    return umilist
+
+my_new_umilist = umi_list_builder(args.umilist) 
+
+def position_changer(flag, cigar, position):
     '''This function calculates where the read should map to the reference and assigns this position to matched reads.
 Sample input: 1573, '15S75M', forward
 Sample output: 1558 (adjusted starting position)'''
-        
+    
     pos = 0    
-    matches = re.findall(r'(\d+)([A-Z]{1})', cigar)
+    matches = re.findall(r'(\d+)([MNDS])', cigar)
     print(matches)
     if((flag & 16) != 16): #if on plus strand
         if 'S' in matches[0][1]:
@@ -28,25 +42,15 @@ Sample output: 1558 (adjusted starting position)'''
         else:
             return position
     else:
-        for i,match in matches:
-            #print(f'i {i}')
-            #print(f'match {match}')
-            if i==0 and 'S' != match[1] or 'I' != match:
-                pos+=int(i)
+        #for i,match in enumerate(matches):
+        if 'S' == matches[0][1]:
+            matches = matches[1::]
+        for i in range(len(matches)):
+                pos+=int(matches[i][0])
         return position + pos 
 
-def strandedness(bitflag)
-    '''placeholder'''
-    return (bitflag & 0x10) != 0 #checking if minus strand 
-
-umi_list=[]
-with open(u, "r") as file:
-    for line in file:
-        line = line.strip("\n")
-        umi_list.append(line)
-
 alignment = set()    
-with open (sorted_sam, 'r') as fh, open (o, 'w') as outfile:
+with open (f, 'r') as fh, open (o, 'w') as outfile:
     for line in fh:
         if line.startswith("@"):
             outfile.write(line)
@@ -61,6 +65,27 @@ with open (sorted_sam, 'r') as fh, open (o, 'w') as outfile:
             cigar = line[5]
             position = int(line[3])
             adjusted_position = position_changer(bitflag, cigar, position)
-            if umi not in umi list:
+            if umi not in my_new_umilist:
                 continue
-            if minus strand
+            if minus_strand:
+                position = position_changer(bitflag, cigar, position)
+            else:
+                if soft_clipped:
+                    position = position_changer(bitflag, cigar, position)
+                else:
+                    position = int(line[3])
+            items=(chromosme, strand, position, umi)
+
+        if items in alignment:
+            duplicate +=1
+            continue
+        else:
+            alignment.add(items)
+            outfile.write("\t".join(line))
+
+        if chrome != prev_chromosome:
+            alignment.clear()
+            prev_chrome = chrome
+print(duplicate)
+
+    
